@@ -1,5 +1,6 @@
 /* process.c - Process manager implementation */
 #include "process.h"
+#include "scheduler.h"
 #include "memory.h"
 #include "serial.h"
 #include "string.h"
