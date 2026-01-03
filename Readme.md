@@ -14,16 +14,22 @@ kacchiOS is a simple, bare-metal operating system built from scratch for educati
 
 - ✅ **Multiboot-compliant bootloader** - Boots via GRUB/QEMU
 - ✅ **Serial I/O driver** (COM1) - Communication via serial port
-- ✅ **Null process** - Single process that reads and echoes input
+- ✅ **Memory Manager** - Simple bump allocator for dynamic memory
+- ✅ **Process Manager** - Process creation, termination, and lifecycle management
+- ✅ **Round-Robin Scheduler** - Time-sliced process scheduling
+- ✅ **Interactive shell** - Command-line interface with process management commands
 - ✅ **Basic string utilities** - Essential string operations
 - ✅ **Clean, documented code** - Easy to understand and extend
 
 ### Future Extensions (Student Assignments)
 
-Students will extend kacchiOS by implementing:
-- 📝 **Memory Manager**
-- 📝 **Process Manager**
-- 📝 **Scheduler**
+Students can extend kacchiOS by implementing:
+- 📝 **Complete Context Switching** - Full assembly-level register save/restore
+- 📝 **Timer Interrupt Integration** - Hardware timer for automatic preemption
+- 📝 **Priority Scheduling** - Enhance scheduler to respect process priorities
+- 📝 **Process Synchronization** - Mutexes, semaphores, condition variables
+- 📝 **Inter-Process Communication** - Message passing or shared memory
+- 📝 **System Calls** - System call interface for user processes
 
 ## 🚀 Quick Start
 
@@ -61,28 +67,57 @@ You should see:
     kacchiOS - Minimal Baremetal OS
 ========================================
 Hello from kacchiOS!
-Running null process...
+Process Manager & Scheduler Demo
+
+Memory Test: Memory init success
+
+Process manager initialized.
+Scheduler initialized (Round-Robin).
+Creating demo processes...
+Created process: idle (PID: 0)
+Created process: worker1 (PID: 1)
+Created process: counter (PID: 2)
+
+Available commands:
+  ps       - List all processes
+  stats    - Show scheduler statistics
+  help     - Show this help message
+  exit     - Halt the system
 
 kacchiOS> 
 ```
 
-Type something and press Enter - it will echo back!
+### Available Commands
+
+- `ps` - List all processes with their states and priorities
+- `stats` - Show scheduler statistics and current process info
+- `help` - Display available commands
+- `exit` - Halt the system
+
+Type a command and press Enter!
 
 ## 📁 Project Structure
 
 ```
 kacchiOS/
-├── boot.S          # Bootloader entry point (Assembly)
-├── kernel.c        # Main kernel (null process)
-├── serial.c        # Serial port driver (COM1)
-├── serial.h        # Serial driver interface
-├── string.c        # String utility functions
-├── string.h        # String utility interface
-├── types.h         # Basic type definitions
-├── io.h            # I/O port operations
-├── link.ld         # Linker script
-├── Makefile        # Build system
-└── README.md       # This file
+├── boot.S                      # Bootloader entry point (Assembly)
+├── kernel.c                    # Main kernel with process demo
+├── serial.c                    # Serial port driver (COM1)
+├── serial.h                    # Serial driver interface
+├── string.c                    # String utility functions
+├── string.h                    # String utility interface
+├── memory.c                    # Memory manager (bump allocator)
+├── memory.h                    # Memory manager interface
+├── process.c                   # Process manager implementation
+├── process.h                   # Process manager interface
+├── scheduler.c                 # Round-robin scheduler implementation
+├── scheduler.h                 # Scheduler interface
+├── types.h                     # Basic type definitions
+├── io.h                        # I/O port operations
+├── link.ld                     # Linker script
+├── Makefile                    # Build system
+├── README.md                   # This file
+└── PROCESS_SCHEDULER_GUIDE.md  # Detailed implementation guide
 ```
 
 ## 🛠️ Build System
@@ -99,6 +134,16 @@ kacchiOS/
 
 ## 📚 Learning Resources
 
+### Implementation Guide
+
+See [PROCESS_SCHEDULER_GUIDE.md](PROCESS_SCHEDULER_GUIDE.md) for detailed documentation on:
+- Process Control Block (PCB) structure
+- Process states and lifecycle
+- Round-robin scheduling algorithm
+- Context switching framework
+- Usage examples and testing
+- Future enhancement ideas
+
 ### Recommended Reading
 
 - [XINU OS](https://xinu.cs.purdue.edu/) - Educational OS similar to kacchiOS
@@ -109,8 +154,10 @@ kacchiOS/
 ### Related Topics
 
 - x86 Assembly Language
+- Process Management
 - Memory Management
-- Process Scheduling
+- Process Scheduling Algorithms
+- Context Switching
 - System Calls
 - Interrupt Handling
 
