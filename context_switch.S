@@ -9,48 +9,40 @@
  * Saves the context of old_proc and restores the context of new_proc
  * 
  * Process structure offsets:
- *   esp: 44 bytes
- *   ebp: 48 bytes
- *   eip: 52 bytes
- *   eflags: 56 bytes
+ *   stack_ptr: 44 bytes (uint32_t*)
  */
 switch_to_process:
+    /* Get parameters before modifying stack */
+    movl 4(%esp), %eax          /* old_proc */
+    movl 8(%esp), %edx          /* new_proc */
+    
     /* Save old process context if old_proc is not NULL */
-    movl 4(%esp), %eax          /* Load old_proc pointer into eax */
-    testl %eax, %eax            /* Check if old_proc is NULL */
-    jz load_new_context         /* If NULL, skip saving */
-
-    /* Save all general purpose registers */
+    testl %eax, %eax
+    jz load_new_context
+    
+    /* Save return address first */
+    movl (%esp), %ecx           /* Get return address */
+    
+    /* Save registers in order: EBX, ECX, EDX, ESI, EDI, EBP, EFLAGS, RET */
     pushl %ebx
     pushl %ecx
     pushl %edx
     pushl %esi
     pushl %edi
     pushl %ebp
-    
-    /* Save flags */
     pushfl
+    pushl %ecx                  /* Push return address */
     
-    /* Save current ESP to old_proc->esp (offset 44) */
+    /* Save ESP to old_proc->stack_ptr (offset 44) */
     movl %esp, 44(%eax)
     
-    /* Save EBP to old_proc->ebp (offset 48) */
-    movl %ebp, 48(%eax)
-    
 load_new_context:
-    /* Load new process pointer */
-    movl 8(%esp), %eax          /* Load new_proc pointer into eax */
+    /* Restore ESP from new_proc->stack_ptr (offset 44) */
+    movl 44(%edx), %esp
     
-    /* Restore ESP from new_proc->esp (offset 44) */
-    movl 44(%eax), %esp
-    
-    /* Restore EBP from new_proc->ebp (offset 48) */
-    movl 48(%eax), %ebp
-    
-    /* Restore flags */
-    popfl
-    
-    /* Restore all general purpose registers */
+    /* Pop everything in reverse order */
+    popl %ecx                   /* Pop return address */
+    popfl                       /* Restore flags */
     popl %ebp
     popl %edi
     popl %esi
@@ -58,37 +50,32 @@ load_new_context:
     popl %ecx
     popl %ebx
     
-    /* Return to new process */
-    ret
+    /* Jump to return address (either resume_here or entry_point) */
+    jmp *%ecx
 
 /*
  * void start_first_process(process_t *proc)
  * 
  * Starts the first process (no context to save)
- * This sets up the stack and jumps to the process entry point
  */
 start_first_process:
     movl 4(%esp), %eax          /* Load proc pointer */
     
-    /* Load stack pointer from proc->esp (offset 44) */
+    /* Load stack pointer from proc->stack_ptr (offset 44) */
     movl 44(%eax), %esp
     
-    /* Load base pointer from proc->ebp (offset 48) */
-    movl 48(%eax), %ebp
+    /* Stack has: EBX, ECX, EDX, ESI, EDI, EBP, EFLAGS, entry_point */
+    /* Pop everything */
+    popl %ecx                   /* Pop entry_point */
+    popfl                       /* Restore EFLAGS */
+    popl %ebp
+    popl %edi
+    popl %esi
+    popl %edx
+    popl %ecx
+    popl %ebx
     
-    /* Load entry point from proc->eip (offset 52) */
-    movl 52(%eax), %ecx
-    
-    /* Clear all registers for clean start */
-    xorl %eax, %eax
-    xorl %ebx, %ebx
-    xorl %edx, %edx
-    xorl %esi, %esi
-    xorl %edi, %edi
-    
-    /* Enable interrupts */
-    sti
-    
-    /* Jump to process entry point */
-    jmp *%ecx
+    /* Jump to entry point */
+    push %ecx                   /* Use the entry point we popped */
+    ret
 

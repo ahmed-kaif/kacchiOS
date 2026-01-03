@@ -3,6 +3,7 @@
 #include "process.h"
 #include "serial.h"
 #include "helper.h"
+#include "pic.h"
 
 /* External assembly functions */
 extern void switch_to_process(process_t *old_proc, process_t *new_proc);
@@ -93,7 +94,16 @@ void scheduler_start(void)
         serial_puts(pid_str);
         serial_puts(")\n");
 
-        serial_puts("Note: Timer interrupts not implemented - scheduler runs on manual ticks.\n");
+        /* Enable interrupts before jumping to process */
+        serial_puts("Enabling interrupts...\n");
+        interrupts_enable();
+
+        /* Jump to first process - this never returns */
+        serial_puts("Jumping to first process...\n");
+        start_first_process(first_proc);
+
+        /* Should never reach here */
+        serial_puts("ERROR: Returned from first process!\n");
     }
     else
     {
@@ -175,6 +185,85 @@ void scheduler_schedule(void)
         {
             context_switch(current, next);
         }
+    }
+}
+
+/* Scheduler tick from timer interrupt - lightweight version */
+void scheduler_tick(void)
+{
+    /* For now, just update ticks - context switch is too complex from interrupt */
+    /* In a real OS, this would need careful stack management */
+    if (scheduler_enabled)
+    {
+        total_ticks++;
+    }
+}
+
+/* Check if reschedule is needed (called from interrupt) */
+int scheduler_need_reschedule(void)
+{
+    if (!scheduler_enabled)
+    {
+        return 0;
+    }
+
+    total_ticks++;
+
+    process_t *current = process_current();
+    if (current == NULL)
+    {
+        return 0;
+    }
+
+    /* Decrement time slice */
+    if (current->time_slice > 0)
+    {
+        current->time_slice--;
+        current->total_time++;
+    }
+
+    /* Need to reschedule if time slice expired */
+    return (current->time_slice == 0);
+}
+
+/* Switch context from interrupt handler */
+void scheduler_switch_from_interrupt(void)
+{
+    process_t *current = process_current();
+    process_t *next;
+
+    if (current == NULL)
+    {
+        return;
+    }
+
+    /* Reset time slice */
+    current->time_slice = time_quantum;
+
+    /* Find next process */
+    next = find_next_process();
+
+    if (next != NULL && next != current)
+    {
+        /* Update states */
+        if (current->state == PROC_RUNNING)
+        {
+            current->state = PROC_READY;
+        }
+
+        next->state = PROC_RUNNING;
+        process_set_current(next->pid);
+
+        total_context_switches++;
+
+        serial_puts("[SCHED] Preempt: ");
+        serial_puts(current->name);
+        serial_puts(" -> ");
+        serial_puts(next->name);
+        serial_puts("\n");
+
+        /* Note: Actual context switch will happen when interrupt returns */
+        /* We just update the process state here */
     }
 }
 

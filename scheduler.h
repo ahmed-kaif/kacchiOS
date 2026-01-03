@@ -17,6 +17,15 @@ void scheduler_start(void);
 /* Schedule next process (called by timer interrupt) */
 void scheduler_schedule(void);
 
+/* Scheduler tick from timer interrupt */
+void scheduler_tick(void);
+
+/* Check if reschedule is needed (called from interrupt) */
+int scheduler_need_reschedule(void);
+
+/* Switch context from interrupt handler */
+void scheduler_switch_from_interrupt(void);
+
 /* Yield CPU to next process */
 void scheduler_yield(void);
 

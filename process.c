@@ -96,18 +96,20 @@ pid_t process_create(const char *name, void (*entry_point)(void), uint32_t prior
     }
 
     /* Initialize stack pointer (stack grows downward) */
-    /* Leave room for context switch frame */
-    proc->stack_ptr = (uint32_t *)(proc->stack_base + PROC_STACK_SIZE);
+    /* Calculate top of stack - cast to char* for byte arithmetic */
+    uint32_t *stack_top = (uint32_t *)((char *)proc->stack_base + PROC_STACK_SIZE);
+    proc->stack_ptr = stack_top;
 
-    /* Push initial context onto stack (for context_switch to restore) */
-    *(--proc->stack_ptr) = 0x00000000;            /* EBX */
-    *(--proc->stack_ptr) = 0x00000000;            /* ECX */
-    *(--proc->stack_ptr) = 0x00000000;            /* EDX */
-    *(--proc->stack_ptr) = 0x00000000;            /* ESI */
-    *(--proc->stack_ptr) = 0x00000000;            /* EDI */
-    *(--proc->stack_ptr) = 0x00000000;            /* EBP */
+    /* Push initial context onto stack to match what switch_to_process expects */
+    /* Stack layout: EBX, ECX, EDX, ESI, EDI, EBP, EFLAGS, return_address */
+    *(--proc->stack_ptr) = (uint32_t)entry_point; /* Return address */
     *(--proc->stack_ptr) = 0x00000202;            /* EFLAGS (interrupts enabled) */
-    *(--proc->stack_ptr) = (uint32_t)entry_point; /* Return address (entry point) */
+    *(--proc->stack_ptr) = 0x00000000;            /* EBP */
+    *(--proc->stack_ptr) = 0x00000000;            /* EDI */
+    *(--proc->stack_ptr) = 0x00000000;            /* ESI */
+    *(--proc->stack_ptr) = 0x00000000;            /* EDX */
+    *(--proc->stack_ptr) = 0x00000000;            /* ECX */
+    *(--proc->stack_ptr) = 0x00000000;            /* EBX */
 
     /* Initialize scheduling information */
     proc->time_slice = 10; /* Default time slice */

@@ -5,6 +5,10 @@
 #include "types.h"
 #include "process.h"
 #include "scheduler.h"
+#include "idt.h"
+#include "pic.h"
+#include "timer.h"
+#include "helper.h"
 #include <string.h>
 #define MAX_INPUT 128
 
@@ -12,14 +16,20 @@
 void process_counter(void)
 {
   int count = 0;
+  serial_puts("[Counter] Started\n");
+
   while (1)
   {
-    serial_puts("[Counter] Count: ");
-    /* Simple counter display */
-    count++;
+    if (count % 5 == 0)
+    {
+      serial_puts("[Counter] Count: ");
+      char num_str[12];
+      int_to_str(count, num_str);
+      serial_puts(num_str);
+      serial_puts("\n");
+    }
 
-    /* Yield to other processes */
-    scheduler_yield();
+    count++;
 
     /* Simulate some work */
     int i;
@@ -33,10 +43,10 @@ void process_counter(void)
 /* Example process 2: Idle process */
 void process_idle(void)
 {
+  serial_puts("[Idle] Started\n");
   while (1)
   {
-    /* Just yield CPU */
-    scheduler_yield();
+    /* Just halt and wait for timer interrupt */
     __asm__ volatile("hlt");
   }
 }
@@ -45,9 +55,20 @@ void process_idle(void)
 void process_worker(void)
 {
   int work_units = 0;
+  serial_puts("[Worker] Started\n");
+
   while (1)
   {
     work_units++;
+
+    if (work_units % 10 == 0)
+    {
+      serial_puts("[Worker] Work units: ");
+      char num_str[12];
+      int_to_str(work_units, num_str);
+      serial_puts(num_str);
+      serial_puts("\n");
+    }
 
     /* Simulate work */
     int i;
@@ -55,8 +76,6 @@ void process_worker(void)
     {
       __asm__ volatile("nop");
     }
-
-    scheduler_yield();
   }
 }
 
@@ -67,9 +86,18 @@ void kmain(void)
 
   /* Initialize hardware */
   serial_init();
+
+  /* Initialize interrupt system */
+  idt_init();
+  pic_init();
+
+  /* Initialize subsystems */
   memory_init();
   process_init();
   scheduler_init();
+
+  /* Initialize timer (100 Hz = 10ms per tick) */
+  timer_init(100);
 
   /* memory test */
   char *test_str = (char *)kmalloc(20);
@@ -92,6 +120,7 @@ void kmain(void)
   serial_puts("  start    - Start the scheduler\n");
   serial_puts("  stats    - Show scheduler statistics\n");
   serial_puts("  mem      - Show memory statistics\n");
+  serial_puts("  ticks    - Show timer ticks\n");
   serial_puts("  help     - Show this help message\n");
   serial_puts("  exit     - Halt the system\n");
   serial_puts("\n");
@@ -145,7 +174,10 @@ void kmain(void)
       }
       else if (strcmp(input, "start") == 0)
       {
+        serial_puts("Note: Starting scheduler will begin process execution.\n");
+        serial_puts("The system will run processes continuously.\n");
         scheduler_start();
+        /* Never returns - scheduler takes over */
       }
       else if (strcmp(input, "stats") == 0)
       {
@@ -155,6 +187,14 @@ void kmain(void)
       {
         memory_dump_stats();
       }
+      else if (strcmp(input, "ticks") == 0)
+      {
+        serial_puts("Timer ticks: ");
+        char ticks_str[12];
+        int_to_str(timer_get_ticks(), ticks_str);
+        serial_puts(ticks_str);
+        serial_puts("\n");
+      }
       else if (strcmp(input, "help") == 0)
       {
         serial_puts("Available commands:\n");
@@ -162,6 +202,7 @@ void kmain(void)
         serial_puts("  start    - Start the scheduler\n");
         serial_puts("  stats    - Show scheduler statistics\n");
         serial_puts("  mem      - Show memory statistics\n");
+        serial_puts("  ticks    - Show timer ticks\n");
         serial_puts("  help     - Show this help message\n");
         serial_puts("  exit     - Halt the system\n");
         serial_puts("\n");
