@@ -83,11 +83,17 @@ void scheduler_start(void)
     if (first_proc != NULL)
     {
         first_proc->state = PROC_RUNNING;
+        process_set_current(first_proc->pid);
+
         serial_puts("Starting process: ");
         serial_puts(first_proc->name);
-        serial_puts("\n");
+        serial_puts(" (PID: ");
+        char pid_str[12];
+        int_to_str(first_proc->pid, pid_str);
+        serial_puts(pid_str);
+        serial_puts(")\n");
 
-        /* TODO: Jump to first process when context switching is implemented */
+        serial_puts("Note: Timer interrupts not implemented - scheduler runs on manual ticks.\n");
     }
     else
     {
