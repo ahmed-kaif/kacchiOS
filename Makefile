@@ -8,7 +8,7 @@ CFLAGS = -m32 -ffreestanding -O2 -Wall -Wextra -nostdinc \
 ASFLAGS = --32
 LDFLAGS = -m elf_i386
 
-OBJS = boot.o kernel.o serial.o string.o memory.o process.o scheduler.o context_switch.o helper.o
+OBJS = boot.o kernel.o serial.o string.o memory.o process.o scheduler.o context_switch.o helper.o gdt.o gdt_asm.o idt.o idt_asm.o timer.o
 
 all: kernel.elf
 
@@ -19,6 +19,12 @@ kernel.elf: $(OBJS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 %.o: %.S
+	$(AS) $(ASFLAGS) $< -o $@
+
+gdt_asm.o: gdt.S
+	$(AS) $(ASFLAGS) $< -o $@
+
+idt_asm.o: idt.S
 	$(AS) $(ASFLAGS) $< -o $@
 
 run: kernel.elf

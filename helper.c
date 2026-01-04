@@ -42,3 +42,14 @@ void int_to_str(int num, char *str)
         str[i - j - 1] = temp;
     }
 }
+
+/* Set memory to a specific value */
+void memset(void *dest, uint8_t val, uint32_t count)
+{
+    uint8_t *temp = (uint8_t *)dest;
+    uint32_t i;
+    for (i = 0; i < count; i++)
+    {
+        temp[i] = val;
+    }
+}

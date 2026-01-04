@@ -96,18 +96,25 @@ pid_t process_create(const char *name, void (*entry_point)(void), uint32_t prior
     }
 
     /* Initialize stack pointer (stack grows downward) */
-    /* Leave room for context switch frame */
-    proc->stack_ptr = (uint32_t *)(proc->stack_base + PROC_STACK_SIZE);
-
-    /* Push initial context onto stack (for context_switch to restore) */
-    *(--proc->stack_ptr) = 0x00000000;            /* EBX */
-    *(--proc->stack_ptr) = 0x00000000;            /* ECX */
-    *(--proc->stack_ptr) = 0x00000000;            /* EDX */
-    *(--proc->stack_ptr) = 0x00000000;            /* ESI */
-    *(--proc->stack_ptr) = 0x00000000;            /* EDI */
-    *(--proc->stack_ptr) = 0x00000000;            /* EBP */
-    *(--proc->stack_ptr) = 0x00000202;            /* EFLAGS (interrupts enabled) */
-    *(--proc->stack_ptr) = (uint32_t)entry_point; /* Return address (entry point) */
+    /* Set up initial stack frame for context switch */
+    /* The stack needs to include enough to return from both switch_to_process AND from an interrupt */
+    uint32_t *stack_top = (uint32_t *)((uint32_t)proc->stack_base + proc->stack_size);
+    
+    /* Set up as if the process was interrupted and its context was saved */
+    /* This matches what switch_to_process expects when restoring:
+     * popfl, popl %ebp, popl %edi, popl %esi, popl %edx, popl %ecx, popl %ebx, ret */
+    
+    *(--stack_top) = (uint32_t)entry_point; /* Return address (entry point) - for 'ret' */
+    *(--stack_top) = 0x00000000;            /* EBX */
+    *(--stack_top) = 0x00000000;            /* ECX */
+    *(--stack_top) = 0x00000000;            /* EDX */
+    *(--stack_top) = 0x00000000;            /* ESI */
+    *(--stack_top) = 0x00000000;            /* EDI */
+    *(--stack_top) = 0x00000000;            /* EBP */
+    *(--stack_top) = 0x00000202;            /* EFLAGS (IF=1) - for 'popfl' */
+    
+    /* Set the stack pointer to the prepared stack */
+    proc->stack_ptr = stack_top;
 
     /* Initialize scheduling information */
     proc->time_slice = 10; /* Default time slice */

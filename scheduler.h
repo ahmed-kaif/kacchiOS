@@ -17,6 +17,9 @@ void scheduler_start(void);
 /* Schedule next process (called by timer interrupt) */
 void scheduler_schedule(void);
 
+/* Timer tick handler - called by timer interrupt */
+void scheduler_tick(void);
+
 /* Yield CPU to next process */
 void scheduler_yield(void);
 

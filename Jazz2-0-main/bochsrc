@@ -1,0 +1,5 @@
+romimage: file=/home/scott/Downloads/bochs-2.8/bios/BIOS-bochs-latest
+vgaromimage: file=/home/scott/Downloads/bochs-2.8/bios/VGABIOS-lgpl-latest
+ata0-slave: type=cdrom, path=kernel.iso, status=inserted
+boot:cdrom
+display_library: x, options = "gui_debug"

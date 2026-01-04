@@ -1,56 +1,40 @@
-/* context_switch.S - Assembly code for context switching */
+/* context_switch.S - Context switching using iret */
 
 .global switch_to_process
 .global start_first_process
 
 /* 
- * void switch_to_process(process_t *old_proc, process_t *new_proc)
- * 
- * Saves the context of old_proc and restores the context of new_proc
- * 
- * Process structure offsets:
- *   esp: 44 bytes
- *   ebp: 48 bytes
- *   eip: 52 bytes
- *   eflags: 56 bytes
+ * switch_to_process(process_t *old_proc, process_t *new_proc)
  */
 switch_to_process:
-    /* Save old process context if old_proc is not NULL */
-    movl 4(%esp), %eax          /* Load old_proc pointer into eax */
-    testl %eax, %eax            /* Check if old_proc is NULL */
-    jz load_new_context         /* If NULL, skip saving */
-
-    /* Save all general purpose registers */
+    movl 4(%esp), %eax          /* old_proc */
+    movl 8(%esp), %edx          /* new_proc */
+    
+    /* Save old process */
+    testl %eax, %eax
+    jz load_new
+    
     pushl %ebx
     pushl %ecx
     pushl %edx
     pushl %esi
     pushl %edi
     pushl %ebp
-    
-    /* Save flags */
     pushfl
     
-    /* Save current ESP to old_proc->esp (offset 44) */
     movl %esp, 44(%eax)
     
-    /* Save EBP to old_proc->ebp (offset 48) */
-    movl %ebp, 48(%eax)
+load_new:
+    /* Switch to new process stack */
+    movl 44(%edx), %esp
     
-load_new_context:
-    /* Load new process pointer */
-    movl 8(%esp), %eax          /* Load new_proc pointer into eax */
+    /* Restore new process registers */
+    /* NOTE: We restore EFLAGS but ensure IF bit is set */
+    popl %ecx               /* Pop EFLAGS into ECX instead of directly with popfl */
+    orl $0x200, %ecx        /* Set IF bit */
+    pushl %ecx
+    popfl                   /* Now restore modified EFLAGS */
     
-    /* Restore ESP from new_proc->esp (offset 44) */
-    movl 44(%eax), %esp
-    
-    /* Restore EBP from new_proc->ebp (offset 48) */
-    movl 48(%eax), %ebp
-    
-    /* Restore flags */
-    popfl
-    
-    /* Restore all general purpose registers */
     popl %ebp
     popl %edi
     popl %esi
@@ -58,37 +42,34 @@ load_new_context:
     popl %ecx
     popl %ebx
     
-    /* Return to new process */
-    ret
-
-/*
- * void start_first_process(process_t *proc)
- * 
- * Starts the first process (no context to save)
- * This sets up the stack and jumps to the process entry point
- */
-start_first_process:
-    movl 4(%esp), %eax          /* Load proc pointer */
+    /* Get return address (process entry/resume point) */
+    popl %eax
     
-    /* Load stack pointer from proc->esp (offset 44) */
+    /* Set up iret frame */
+    pushfl
+    orl $0x200, (%esp)      /* Ensure IF is set in the EFLAGS we'll use for iret */
+    pushl $0x08             /* CS */
+    pushl %eax              /* EIP */
+    
+    /* Jump to process via iret */
+    iret
+
+start_first_process:
+    movl 4(%esp), %eax
     movl 44(%eax), %esp
     
-    /* Load base pointer from proc->ebp (offset 48) */
-    movl 48(%eax), %ebp
+    popfl
+    popl %ebp
+    popl %edi
+    popl %esi
+    popl %edx
+    popl %ecx
+    popl %ebx
+    popl %eax           /* Entry point */
     
-    /* Load entry point from proc->eip (offset 52) */
-    movl 52(%eax), %ecx
+    /* Set up iret frame */
+    pushl $0x202        /* EFLAGS with IF=1 */
+    pushl $0x08         /* CS */
+    pushl %eax          /* EIP */
     
-    /* Clear all registers for clean start */
-    xorl %eax, %eax
-    xorl %ebx, %ebx
-    xorl %edx, %edx
-    xorl %esi, %esi
-    xorl %edi, %edi
-    
-    /* Enable interrupts */
-    sti
-    
-    /* Jump to process entry point */
-    jmp *%ecx
-
+    iret

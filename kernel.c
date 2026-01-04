@@ -5,25 +5,31 @@
 #include "types.h"
 #include "process.h"
 #include "scheduler.h"
+#include "gdt.h"
+#include "idt.h"
+#include "timer.h"
+#include "helper.h"
 #include <string.h>
 #define MAX_INPUT 128
 
 /* Example process 1: Counter process */
 void process_counter(void)
 {
+  /* Ensure interrupts are enabled */
+  __asm__ volatile("sti");
+  
   int count = 0;
   while (1)
   {
     serial_puts("[Counter] Count: ");
-    /* Simple counter display */
-    count++;
+    char num_str[12];
+    int_to_str(count++, num_str);
+    serial_puts(num_str);
+    serial_puts("\n");
 
-    /* Yield to other processes */
-    scheduler_yield();
-
-    /* Simulate some work */
+    /* Busy wait to simulate work */
     int i;
-    for (i = 0; i < 1000000; i++)
+    for (i = 0; i < 50; i++)
     {
       __asm__ volatile("nop");
     }
@@ -32,31 +38,56 @@ void process_counter(void)
 
 /* Example process 2: Idle process */
 void process_idle(void)
-{
+{  
+  /* Ensure interrupts are enabled */
+  __asm__ volatile("sti");
+  
+  serial_puts("[Idle] Interrupts enabled via STI\n");
+  
+  /* Test if interrupts are actually working */
+  uint32_t start_ticks = timer_get_ticks();
+  serial_puts("[Idle] Waiting for interrupt...\n");
+  
+  while (timer_get_ticks() == start_ticks) {
+    /* Spin */
+  }
+  
+  serial_puts("[Idle] Timer interrupt fired!\n");
+  
   while (1)
   {
-    /* Just yield CPU */
-    scheduler_yield();
-    __asm__ volatile("hlt");
+    serial_puts("[Idle] Running...\n");
+    
+    /* Halt until next interrupt */
+    int i;
+    for (i = 0; i < 50; i++)
+    {
+      __asm__ volatile("nop");
+    }
   }
 }
 
 /* Example process 3: Worker process */
 void process_worker(void)
 {
+  /* Ensure interrupts are enabled */
+  __asm__ volatile("sti");
+  
   int work_units = 0;
   while (1)
   {
-    work_units++;
+    serial_puts("[Worker] Work unit: ");
+    char num_str[12];
+    int_to_str(work_units++, num_str);
+    serial_puts(num_str);
+    serial_puts("\n");
 
     /* Simulate work */
     int i;
-    for (i = 0; i < 500000; i++)
+    for (i = 0; i < 50; i++)
     {
       __asm__ volatile("nop");
     }
-
-    scheduler_yield();
   }
 }
 
@@ -67,8 +98,23 @@ void kmain(void)
 
   /* Initialize hardware */
   serial_init();
+  
+  /* Initialize GDT (Global Descriptor Table) */
+  gdt_init();
+  
+  /* Initialize IDT (Interrupt Descriptor Table) */
+  idt_init();
+  
+  /* Initialize PIT timer */
+  timer_init();
+  
+  /* Initialize memory manager */
   memory_init();
+  
+  /* Initialize process manager */
   process_init();
+  
+  /* Initialize scheduler */
   scheduler_init();
 
   /* memory test */
@@ -103,7 +149,14 @@ void kmain(void)
   process_create("counter", process_counter, PRIORITY_NORMAL);
   serial_puts("\n");
 
-  /* Main loop - the "null process" */
+  /* Auto-start scheduler for testing */
+  serial_puts("Auto-starting scheduler...\n");
+  serial_puts("[DEBUG] About to call scheduler_start()\n");
+  scheduler_start();
+  /* scheduler_start() doesn't return - it jumps to first process */
+  serial_puts("[DEBUG] ERROR: Returned from scheduler_start()!\n");
+
+  /* Main loop - the "null process" (should not be reached if scheduler starts) */
   while (1)
   {
     serial_puts("kacchiOS> ");
