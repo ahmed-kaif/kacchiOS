@@ -23,4 +23,10 @@ void scheduler_yield(void);
 /* Get scheduler statistics */
 void scheduler_stats(void);
 
+/* Set time quantum (configurable time slice) */
+void scheduler_set_quantum(uint32_t quantum);
+
+/* Get current time quantum */
+uint32_t scheduler_get_quantum(void);
+
 #endif
