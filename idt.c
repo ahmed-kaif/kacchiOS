@@ -1,4 +1,3 @@
-/* idt.c - Interrupt Descriptor Table implementation */
 #include "idt.h"
 #include "io.h"
 #include "serial.h"
@@ -53,7 +52,7 @@ char *exception_messages[] = {
     "Reserved"
 };
 
-/* Remap the PIC (Programmable Interrupt Controller) */
+/* Remap the PIC */
 static void pic_remap(void) {
     /* ICW1 - Initialize PIC */
     outb(0x20, 0x11);  /* Master PIC command port */
@@ -156,8 +155,8 @@ void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
     idt_entries[num].base_high = (base >> 16) & 0xFFFF;
     idt_entries[num].sel = sel;
     idt_entries[num].always0 = 0;
-    /* Set present bit (0x80) and privilege level to 3 (0x60) */
-    idt_entries[num].flags = flags | 0x60;
+    /* Use the flags as-is (already contains present bit and privilege level) */
+    idt_entries[num].flags = flags;
 }
 
 /* ISR handler - handles CPU exceptions */

@@ -20,6 +20,15 @@ static void timer_handler(struct interrupt_registers *regs) {
     /* Increment tick counter */
     timer_ticks++;
     
+    /* Debug: Print every single tick when we're just starting */
+    if (timer_ticks <= 5) {
+        serial_puts("[TIMER] Tick ");
+        char num_str[12];
+        int_to_str(timer_ticks, num_str);
+        serial_puts(num_str);
+        serial_puts("\n");
+    }
+    
     /* Debug: After first context switch, print frequently to see if interrupts still fire */
     if (context_switches_seen > 0 && timer_ticks % 10 == 0) {
         serial_puts("[TIMER_AFTER_CTX] Tick ");

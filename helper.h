@@ -7,6 +7,9 @@
 /* Convert integer to string */
 void int_to_str(int num, char *str);
 
+/* Convert integer to hex string */
+void int_to_hex(uint32_t num, char *str);
+
 /* Set memory to a specific value */
 void memset(void *dest, uint8_t val, uint32_t count);
 

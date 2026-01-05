@@ -1,4 +1,3 @@
-/* idt.h - Interrupt Descriptor Table interface */
 #ifndef IDT_H
 #define IDT_H
 

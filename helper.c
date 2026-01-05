@@ -53,3 +53,17 @@ void memset(void *dest, uint8_t val, uint32_t count)
         temp[i] = val;
     }
 }
+
+/* Convert integer to hex string */
+void int_to_hex(uint32_t num, char *str)
+{
+    const char hex_digits[] = "0123456789ABCDEF";
+    int i;
+    
+    for (i = 7; i >= 0; i--)
+    {
+        str[i] = hex_digits[num & 0xF];
+        num >>= 4;
+    }
+    str[8] = '\0';
+}

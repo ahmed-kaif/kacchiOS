@@ -44,12 +44,67 @@ void process_idle(void)
   
   serial_puts("[Idle] Interrupts enabled via STI\n");
   
+  /* Check if IF flag is actually set */
+  uint32_t eflags;
+  __asm__ volatile("pushfl; popl %0" : "=r"(eflags));
+  serial_puts("[Idle] EFLAGS = 0x");
+  char buf[12];
+  int_to_hex(eflags, buf);
+  serial_puts(buf);
+  serial_puts(", IF bit = ");
+  serial_puts((eflags & 0x200) ? "1\n" : "0\n");
+  
+  /* Try triggering a software interrupt to test IDT */
+  serial_puts("[Idle] Testing software interrupt...\n");
+  __asm__ volatile("int $0x80");
+  serial_puts("[Idle] Software interrupt returned!\n");
+  
+  /* Check PIC masks */
+  uint8_t mask1, mask2;
+  __asm__ volatile("inb $0x21, %0" : "=a"(mask1));
+  __asm__ volatile("inb $0xA1, %0" : "=a"(mask2));
+  serial_puts("[Idle] PIC masks: Master=0x");
+  int_to_hex(mask1, buf);
+  serial_puts(buf);
+  serial_puts(", Slave=0x");
+  int_to_hex(mask2, buf);
+  serial_puts(buf);
+  serial_puts("\n");
+  
   /* Test if interrupts are actually working */
   uint32_t start_ticks = timer_get_ticks();
   serial_puts("[Idle] Waiting for interrupt...\n");
+  serial_puts("[Idle] Current ticks = ");
+  int_to_str(start_ticks, buf);
+  serial_puts(buf);
+  serial_puts("\n");
   
+  /* Try sending EOI to master PIC */
+  serial_puts("[Idle] Sending EOI to PIC...\n");
+  __asm__ volatile("outb %0, $0x20" : : "a"((uint8_t)0x20));
+  
+  /* Wait a bit and check again */
+  volatile uint32_t delay;
+  for (delay = 0; delay < 10000000; delay++);
+  
+  uint32_t after_delay = timer_get_ticks();
+  serial_puts("[Idle] After delay, ticks = ");
+  int_to_str(after_delay, buf);
+  serial_puts(buf);
+  serial_puts("\n");
+  
+  uint32_t loop_count = 0;
   while (timer_get_ticks() == start_ticks) {
-    /* Spin */
+    loop_count++;
+    if (loop_count % 100000000 == 0) {
+      serial_puts("[Idle] Still waiting, loop count = ");
+      int_to_str(loop_count / 100000000, buf);
+      serial_puts(buf);
+      serial_puts("00M, ticks = ");
+      int_to_str(timer_get_ticks(), buf);
+      serial_puts(buf);
+      serial_puts("\n");
+    }
   }
   
   serial_puts("[Idle] Timer interrupt fired!\n");
@@ -83,11 +138,11 @@ void process_worker(void)
     serial_puts("\n");
 
     /* Simulate work */
-    int i;
-    for (i = 0; i < 50; i++)
-    {
-      __asm__ volatile("nop");
-    }
+    // int i;
+    // for (i = 0; i < 50; i++)
+    // {
+    //   __asm__ volatile("nop");
+    // }
   }
 }
 
@@ -145,8 +200,8 @@ void kmain(void)
   /* Create example processes (currently for demonstration) */
   serial_puts("Creating demo processes...\n");
   process_create("idle", process_idle, PRIORITY_LOW);
-  process_create("worker1", process_worker, PRIORITY_NORMAL);
-  process_create("counter", process_counter, PRIORITY_NORMAL);
+  process_create("worker1", process_worker, PRIORITY_LOW);
+  process_create("counter", process_counter, PRIORITY_LOW);
   serial_puts("\n");
 
   /* Auto-start scheduler for testing */

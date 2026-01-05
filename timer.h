@@ -1,11 +1,10 @@
-/* timer.h - PIT (Programmable Interval Timer) interface */
 #ifndef TIMER_H
 #define TIMER_H
 
 #include "types.h"
 
-/* Timer frequency in Hz (how many times per second the timer fires) */
-#define TIMER_FREQ 1000  /* 100 Hz = 10ms per tick */
+/* Timer frequency in Hz */
+#define TIMER_FREQ 10000  /* 100 Hz = 10ms per tick */
 
 /* Initialize the PIT timer */
 void timer_init(void);

@@ -104,10 +104,18 @@ void scheduler_start(void)
 
         serial_puts("[SCHED] About to call start_first_process...\n");
         
-        /* Jump to the first process - this doesn't return until the process yields or is interrupted */
-        start_first_process(first_proc);
+        /* Enable interrupts before starting the first process */
+        __asm__ volatile("sti");
         
-        serial_puts("[SCHED] ERROR: Returned from start_first_process!\n");
+        /* Get the entry point from the process stack */
+        void (*entry_point)(void) = (void (*)(void)) *((uint32_t *)first_proc->stack_ptr + 7);
+        
+        serial_puts("[SCHED] Jumping to first process directly...\n");
+        
+        /* Just call it directly for now */
+        entry_point();
+        
+        serial_puts("[SCHED] ERROR: Returned from first process!\n");
     }
     else
     {

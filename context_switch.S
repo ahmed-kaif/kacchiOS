@@ -67,9 +67,6 @@ start_first_process:
     popl %ebx
     popl %eax           /* Entry point */
     
-    /* Set up iret frame */
-    pushl $0x202        /* EFLAGS with IF=1 */
-    pushl $0x08         /* CS */
-    pushl %eax          /* EIP */
-    
-    iret
+    /* Enable interrupts and jump directly */
+    sti
+    jmp *%eax
