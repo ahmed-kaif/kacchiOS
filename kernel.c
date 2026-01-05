@@ -197,7 +197,7 @@ void kmain(void)
   serial_puts("  exit     - Halt the system\n");
   serial_puts("\n");
 
-  /* Create example processes (currently for demonstration) */
+  /* Create example processes */
   serial_puts("Creating demo processes...\n");
   process_create("idle", process_idle, PRIORITY_LOW);
   process_create("worker1", process_worker, PRIORITY_LOW);
